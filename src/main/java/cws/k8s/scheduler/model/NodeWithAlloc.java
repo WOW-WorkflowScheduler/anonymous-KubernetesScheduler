@@ -1,6 +1,7 @@
 package cws.k8s.scheduler.model;
 
 import cws.k8s.scheduler.client.KubernetesClient;
+import cws.k8s.scheduler.model.location.NodeLocation;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -26,10 +27,14 @@ public class NodeWithAlloc extends Node implements Comparable<NodeWithAlloc> {
 
     private final List<PodWithAge> startingTaskCopyingData = new LinkedList<>();
 
+    @Getter
+    private final NodeLocation nodeLocation;
+
     public NodeWithAlloc( String name ) {
         this.kubernetesClient = null;
         this.maxResources = null;
         this.assignedPods = null;
+        this.nodeLocation = null;
         this.setMetadata( new ObjectMeta() );
         this.getMetadata().setName( name );
     }
@@ -50,9 +55,11 @@ public class NodeWithAlloc extends Node implements Comparable<NodeWithAlloc> {
         BigDecimal maxCpu = Quantity.getAmountInBytes(this.getStatus().getAllocatable().get("cpu"));
         BigDecimal maxRam = Quantity.getAmountInBytes(this.getStatus().getAllocatable().get("memory"));
 
-        maxResources = new Requirements( maxCpu, maxRam);
+        maxResources = new ImmutableRequirements( maxCpu, maxRam);
 
         assignedPods = new HashMap<>();
+
+        this.nodeLocation = NodeLocation.getLocation( node );
 
         log.info("Node {} has RAM: {} and CPU: {}", node.getMetadata().getName(), maxRam, maxCpu);
     }
@@ -61,14 +68,24 @@ public class NodeWithAlloc extends Node implements Comparable<NodeWithAlloc> {
         Requirements request = pod.getRequest();
         if ( withStartingTasks ) {
             synchronized ( startingTaskCopyingData ) {
-                if ( !startingTaskCopyingData.contains( pod ) ) {
-                    startingTaskCopyingData.add( pod );
+                final Iterator<PodWithAge> iterator = startingTaskCopyingData.iterator();
+                while ( iterator.hasNext() ) {
+                    final PodWithAge copyPod = iterator.next();
+                    if ( getPodInternalId( pod ).equals( getPodInternalId( copyPod ) )) {
+                        iterator.remove();
+                        break;
+                    }
                 }
+                startingTaskCopyingData.add( pod );
             }
         }
         synchronized (assignedPods) {
-            assignedPods.put( pod.getMetadata().getUid(), request );
+            assignedPods.put( getPodInternalId( pod ) , request );
         }
+    }
+
+    private String getPodInternalId( Pod pod ) {
+        return pod.getMetadata().getNamespace() + "||" + pod.getMetadata().getName();
     }
 
     private void removeStartingTaskCopyingDataByUid( String uid ) {
@@ -87,7 +104,7 @@ public class NodeWithAlloc extends Node implements Comparable<NodeWithAlloc> {
     public boolean removePod( Pod pod ){
         removeStartingTaskCopyingDataByUid( pod.getMetadata().getUid() );
         synchronized (assignedPods) {
-            return assignedPods.remove( pod.getMetadata().getUid() ) != null;
+            return assignedPods.remove( getPodInternalId( pod ) ) != null;
         }
     }
 
@@ -158,10 +175,7 @@ public class NodeWithAlloc extends Node implements Comparable<NodeWithAlloc> {
 
     @Override
     public int hashCode() {
-        int result = super.hashCode();
-        result = 31 * result + (getMaxResources() != null ? getMaxResources().hashCode() : 0);
-        result = 31 * result + (getAssignedPods() != null ? getAssignedPods().hashCode() : 0);
-        return result;
+        return this.getName().hashCode();
     }
 
     public boolean isReady(){

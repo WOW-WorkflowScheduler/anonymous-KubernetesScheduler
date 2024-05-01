@@ -1,7 +1,8 @@
-# Common Workflow Scheduler for Kubernetes
-[![DOI](https://zenodo.org/badge/596122315.svg)](https://zenodo.org/badge/latestdoi/596122315)
+# Kubernetes Workflow Scheduler
 
-In this repository, you will find the Common Workflow Scheduler for Kubernetes proposed in the paper "**How Workflow Engines Should Talk to Resource Managers: A Proposal for a Common Workflow Scheduling Interface**."
+SWAGGER: http://localhost:8080/swagger-ui.html
+
+API-DOCS: http://localhost:8080/v3/api-docs/
 
 ---
 #### Build
@@ -142,4 +143,4 @@ Lehmann Fabian, Jonathan Bader, Friedrich Tschirpke, Lauritz Thamsen, and Ulf Le
 ```
 ---
 #### Acknowledgement:
-This work was funded by the German Research Foundation (DFG), CRC 1404: "FONDA: Foundations of Workflows for Large-Scale Scientific Data Analysis." 
+This work was funded by the German Research Foundation (DFG), CRC 1404: "FONDA: Foundations of Workflows for Large-Scale Scientific Data Analysis."

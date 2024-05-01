@@ -1,5 +1,6 @@
 package cws.k8s.scheduler.model;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
 
@@ -7,11 +8,10 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 
 @ToString
-public class Requirements implements Serializable {
+@EqualsAndHashCode
+public class Requirements implements Serializable, Cloneable {
 
     private static final long serialVersionUID = 1L;
-
-    public static final Requirements ZERO = new Requirements();
 
     @Getter
     private BigDecimal cpu;
@@ -23,6 +23,16 @@ public class Requirements implements Serializable {
         this.ram = ram == null ? BigDecimal.ZERO : ram;
     }
 
+    /**
+     * Basically used for testing
+     * @param cpu
+     * @param ram
+     */
+    public Requirements( int cpu, int ram ) {
+        this.cpu = BigDecimal.valueOf(cpu);
+        this.ram = BigDecimal.valueOf(ram);
+    }
+
     public Requirements(){
         this( BigDecimal.ZERO, BigDecimal.ZERO );
     }
@@ -31,6 +41,13 @@ public class Requirements implements Serializable {
         this.cpu = this.cpu.add(requirements.cpu);
         this.ram = this.ram.add(requirements.ram);
         return this;
+    }
+
+    public Requirements add( Requirements requirements ){
+        return new Requirements(
+                this.cpu.add(requirements.cpu),
+                this.ram.add(requirements.ram)
+        );
     }
 
     public Requirements addRAMtoThis( BigDecimal ram ){
@@ -56,9 +73,46 @@ public class Requirements implements Serializable {
         );
     }
 
+    public Requirements multiply( BigDecimal factor ){
+        return new Requirements(
+                this.cpu.multiply(factor),
+                this.ram.multiply(factor)
+        );
+    }
+
+    public Requirements multiplyToThis( BigDecimal factor ){
+        this.cpu = this.cpu.multiply(factor);
+        this.ram = this.ram.multiply(factor);
+        return this;
+    }
+
     public boolean higherOrEquals( Requirements requirements ){
         return this.cpu.compareTo( requirements.cpu ) >= 0
                 && this.ram.compareTo( requirements.ram ) >= 0;
+    }
+
+    /**
+     * Always returns a mutable copy of this object
+     * @return
+     */
+    @Override
+    public Requirements clone() {
+        return new Requirements( this.cpu, this.ram );
+    }
+
+    public boolean smaller( Requirements request ) {
+        return this.cpu.compareTo( request.cpu ) < 0
+                && this.ram.compareTo( request.ram ) < 0;
+    }
+
+    public boolean smallerEquals( Requirements request ) {
+        return this.cpu.compareTo( request.cpu ) <= 0
+                && this.ram.compareTo( request.ram ) <= 0;
+    }
+
+    public boolean atLeastOneBigger( Requirements request ) {
+        return this.cpu.compareTo( request.cpu ) > 0
+                || this.ram.compareTo( request.ram ) > 0;
     }
 
 }
